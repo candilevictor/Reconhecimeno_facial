@@ -126,7 +126,8 @@ def start_recognition():
 
     with mp_face_detection.FaceDetection(
         model_selection=1, min_detection_confidence=0.5) as face_detection:
-        while True:
+        recognized = False
+        while not recognized:
             # Capturar um único frame de vídeo
             ret, frame = video_capture.read()
 
@@ -176,9 +177,7 @@ def start_recognition():
                     else:
                         # Mostrar uma mensagem de boas-vindas e os dados do paciente na área de texto
                         display_message(f"Bem-vindo, {name}! Seu cartão SUS é: {sus_card}")
-
-                        # Encerrar o loop quando uma pessoa reconhecida for encontrada
-                        break
+                        recognized = True
 
                     # Mostrar o nome e cartão do SUS na imagem capturada
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
