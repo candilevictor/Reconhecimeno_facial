@@ -7,6 +7,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+import requests
 
 # Inicializar mediapipe
 mp_face_detection = mp.solutions.face_detection
@@ -55,18 +56,15 @@ def encode_face(face_image):
         return None
 
 # Função para capturar várias imagens de uma nova pessoa e calcular a codificação média
-def capture_and_encode_faces(name, sus_card, num_images=200, pause_duration=0.3):
-    display_message("Capturando imagens. Continue olhando para a câmera.")
+def capture_and_encode_faces(video_capture, name, sus_card, num_images=200, pause_duration=0.3):
     encodings = []
-    video_capture = cv2.VideoCapture(0)
     image_count = 0
 
     with mp_face_detection.FaceDetection(
         model_selection=1, min_detection_confidence=0.5) as face_detection:
         while image_count < num_images:
-            ret, frame = video_capture.read()
-            if not ret:
-                continue
+            # Capturar um único frame de vídeo
+            frame = video_capture.read()[1]
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = face_detection.process(rgb_frame)
@@ -90,9 +88,6 @@ def capture_and_encode_faces(name, sus_card, num_images=200, pause_duration=0.3)
             cv2.imshow('Capturando Imagens', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
-    video_capture.release()
-    cv2.destroyAllWindows()
 
     if encodings:
         average_encoding = np.mean(encodings, axis=0)
@@ -128,17 +123,16 @@ def start_recognition():
     known_face_encodings, known_face_names, known_face_sus_cards = load_known_faces()
 
     # Iniciar a captura de vídeo
-    video_capture = cv2.VideoCapture(0)
+    # Substitua a URL pela URL fornecida pelo IP Webcam
+    url = "http://192.168.3.59:8080/video"
+    video_capture = cv2.VideoCapture(url)
 
     with mp_face_detection.FaceDetection(
-        model_selection=1, min_detection_confidence=0.5) as face_detection:
+                model_selection=1, min_detection_confidence=0.5) as face_detection:
         recognized = False
         while not recognized:
             # Capturar um único frame de vídeo
-            ret, frame = video_capture.read()
-
-            if not ret:
-                break
+            frame = video_capture.read()[1]
 
             # Converter a imagem para RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -162,7 +156,7 @@ def start_recognition():
                     if face_encoding is None:
                         continue
 
-                    # Verificar se a face é de uma pessoa conhecida
+                                        # Verificar se a face é de uma pessoa conhecida
                     name, sus_card = recognize_face(face_encoding, known_face_encodings, known_face_names, known_face_sus_cards)
                     if name == "Desconhecido":
                         # Solicitar o nome e cartão do SUS se a pessoa não for reconhecida
@@ -174,7 +168,7 @@ def start_recognition():
                         sus_card = entry_sus_card.get()
 
                         # Capturar várias imagens da nova pessoa e calcular a codificação média
-                        average_encoding = capture_and_encode_faces(name, sus_card, num_images=200)
+                        average_encoding = capture_and_encode_faces(video_capture, name, sus_card, num_images=200)
                         if average_encoding is not None:
                             known_face_encodings.append(average_encoding)
                             known_face_names.append(name)
@@ -220,7 +214,7 @@ def save_user_input():
 # Criar a interface gráfica
 root = tk.Tk()
 root.title("Reconhecimento Facial SUS")
-root.geometry("640x480")  # Definindo o tamanho da janela
+root.geometry("900x700")  # Definindo o tamanho da janela
 
 # Configurações de cores e estilo
 bg_color = "#F0E5DA"  # Cor de fundo principal
@@ -244,7 +238,8 @@ label_sus_card.pack(pady=(10, 5))
 entry_sus_card = tk.Entry(root, bg=entry_color, fg=label_color, font=("Helvetica", 12))  # Configuração do campo de entrada para o cartão SUS
 entry_sus_card.pack(ipady=5, padx=10)
 
-button_save = tk.Button(root, text="Salvar", command=save_user_input, bg=button_color, fg=button_text_color, font=("Helvetica", 12, "bold"))  # Configuração do botão "Salvar"
+button_save = tk.Button(root, text="Salvar", command=save_user_input, bg=button_color, fg=button_text_color, font=("Helvetica", 12, "bold"))  # Configuração
+# Configuração do botão "Salvar"
 button_save.pack(pady=10)
 
 user_input_var = tk.BooleanVar()
@@ -264,3 +259,4 @@ label_camera = tk.Label(root)
 label_camera.pack(pady=10)
 
 root.mainloop()
+
